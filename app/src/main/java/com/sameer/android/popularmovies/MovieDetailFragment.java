@@ -35,25 +35,13 @@ public class MovieDetailFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRetainInstance(true);
 
         if (getArguments().containsKey(ARG_MOVIE)) {
             // Load the dummy content specified by the fragment
             // arguments. In a real-world scenario, use a Loader
             // to load content from a content provider.
             movie = getArguments().getParcelable(ARG_MOVIE);
-
-            Activity activity = this.getActivity();
-            CollapsingToolbarLayout appBarLayout = (CollapsingToolbarLayout) activity.findViewById(R.id.toolbar_layout);
-            if (appBarLayout != null) {
-                appBarLayout.setTitle(movie.getTitle());
-                ImageView imageView = (ImageView)activity.findViewById(R.id.movie_post);
-
-                final String TMDB_BASE_URL = "http://image.tmdb.org/t/p/w342";
-                String url = TMDB_BASE_URL + movie.getImagePath();
-                Picasso.with(getContext())
-                        .load(url)
-                        .into(imageView);
-            }
         }
     }
 
@@ -62,9 +50,23 @@ public class MovieDetailFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.movie_detail, container, false);
 
+        Activity activity = this.getActivity();
+        CollapsingToolbarLayout appBarLayout = (CollapsingToolbarLayout) activity.findViewById(R.id.toolbar_layout);
+        if (appBarLayout != null) {
+            appBarLayout.setTitle(" ");
+
+            ImageView imageView = (ImageView)activity.findViewById(R.id.movie_post);
+            String url = Movie.TMDB_BASE_POSTER_URL + movie.getImagePath();
+            Picasso.with(getContext())
+                    .load(url)
+                    .placeholder(R.color.colorPrimary)
+                    .into(imageView);
+        }
+
         // Show the dummy content as text in a TextView.
         if (movie != null) {
-            ((TextView) rootView.findViewById(R.id.movie_detail)).setText(movie.getOverview());
+            ((TextView) rootView.findViewById(R.id.movie_title)).setText(movie.getTitle());
+            ((TextView) rootView.findViewById(R.id.movie_details)).setText(movie.getOverview());
             ((TextView) rootView.findViewById(R.id.movie_rating)).setText("Rating: " + movie.getRating());
             ((TextView) rootView.findViewById(R.id.movie_release)).setText("Date: " + movie.getReleaseDate());
         }

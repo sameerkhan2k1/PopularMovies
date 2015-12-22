@@ -3,10 +3,15 @@ package com.sameer.android.popularmovies;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.Comparator;
+
 /**
  * Created by Sameer on 07/12/15.
  */
-public class Movie implements Parcelable {
+public class Movie implements Parcelable, Comparator, Comparable {
+    public static final String TMDB_BASE_POSTER_URL = "http://image.tmdb.org/t/p/w342";
+    public static final String TMDB_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
+
     private String title;
     private String imagePath;
     private String overview;
@@ -69,5 +74,15 @@ public class Movie implements Parcelable {
         overview = in.readString();
         rating = in.readString();
         release_date = in.readString();
+    }
+
+    @Override
+    public int compareTo(Object another) {
+        return Double.compare(Double.parseDouble(((Movie)another).getRating()), Double.parseDouble(this.getRating()));
+    }
+
+    @Override
+    public int compare(Object lhs, Object rhs) {
+        return Double.compare(Double.parseDouble(((Movie)lhs).getRating()), Double.parseDouble(((Movie)rhs).getRating()));
     }
 }

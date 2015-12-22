@@ -2,28 +2,39 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_margin="16dp"
     android:orientation="vertical"
     tools:context="com.sameer.android.popularmovies.MovieDetailFragment">
 
     <TextView
-        android:id="@+id/movie_rating"
+        android:id="@+id/movie_title"
         style="?android:attr/textAppearanceMedium"
+        android:textStyle="bold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="4dp" />
+        android:paddingBottom="4dp"
+        android:textColor="@android:color/black"/>
+
+    <TextView
+        android:id="@+id/movie_rating"
+        style="?android:attr/textAppearanceSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="4dp"
+        android:textColor="@android:color/black"/>
 
     <TextView
         android:id="@+id/movie_release"
+        style="?android:attr/textAppearanceSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="4dp"
+        android:textColor="@android:color/black"/>
+
+    <TextView
+        android:id="@+id/movie_details"
         style="?android:attr/textAppearanceMedium"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="4dp" />
-
-    <TextView
-        android:id="@+id/movie_detail"
-        style="?android:attr/textAppearanceLarge"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:textColor="@android:color/black"/>
 
 </LinearLayout>

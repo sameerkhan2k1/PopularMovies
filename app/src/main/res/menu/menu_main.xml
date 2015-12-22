@@ -1,0 +1,22 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MovieListActivity">
+    <item
+        android:id="@+id/action_sort"
+        android:icon="@drawable/ic_sort_white"
+        android:orderInCategory="101"
+        android:title="@string/action_sort"
+        app:showAsAction="collapseActionView|ifRoom">
+        <menu android:checkableBehavior="single">
+            <item
+                android:id="@+id/action_sort_popularity"
+                android:orderInCategory="1"
+                android:title="@string/action_sort_popularity" />
+            <item
+                android:id="@+id/action_sort_rating"
+                android:orderInCategory="2"
+                android:title="@string/action_sort_rating" />
+        </menu>
+    </item>
+</menu>

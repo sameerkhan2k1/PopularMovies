@@ -1,37 +1,39 @@
 package com.sameer.android.popularmovies;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.ProgressBar;
 
-
+import com.squareup.okhttp.Headers;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -43,12 +45,13 @@ import java.util.List;
  * item details side-by-side using two vertical panes.
  */
 public class MovieListActivity extends AppCompatActivity {
-
-    /**
-     * Whether or not the activity is in two-pane mode, i.e. running on a tablet
-     * device.
-     */
+    private static final String TAG = MovieListActivity.class.getSimpleName();
     private boolean mTwoPane;
+    private ArrayList<Movie> mMovieList;
+    private SimpleItemRecyclerViewAdapter mAdapter;
+    private ProgressBar mProgressBar;
+    private enum SortStyle { POP_ASC, POP_DESC, VOTE_ASC, VOTE_DESC};
+    private SortStyle sortStyle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,27 +62,31 @@ public class MovieListActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         toolbar.setTitle(getTitle());
 
-//        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-//        fab.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
-//            }
-//        });
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
+        mProgressBar.setVisibility(View.VISIBLE);
+
+        if (savedInstanceState == null || !savedInstanceState.containsKey("movies")) {
+            if (!isNetworkAvailable()) {
+                mProgressBar.setVisibility(View.GONE);
+                showDialog();
+            }
+
+            mMovieList = new ArrayList<>();
+            fetchData(SortStyle.POP_DESC);
+        }
+        else {
+            mMovieList = savedInstanceState.getParcelableArrayList("movies");
+            mProgressBar.setVisibility(View.GONE);
+        }
+
+        mAdapter = new SimpleItemRecyclerViewAdapter(mMovieList);
 
         View recyclerView = findViewById(R.id.movie_list);
-        assert recyclerView != null;
-
-        List<Movie> movies = new ArrayList<>();
-        SimpleItemRecyclerViewAdapter viewAdapter = new SimpleItemRecyclerViewAdapter(movies);
-        MoviesInfoTask task = new MoviesInfoTask(movies, viewAdapter);
-        task.execute((URL) null);
-
-        ((RecyclerView) recyclerView).setAdapter(viewAdapter);
+        ((RecyclerView) recyclerView).setAdapter(mAdapter);
 
         RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
         ((RecyclerView) recyclerView).setLayoutManager(layoutManager);
+        ((RecyclerView) recyclerView).setHasFixedSize(true);
 
         if (findViewById(R.id.movie_detail_container) != null) {
             // The detail container view will be present only in the
@@ -88,6 +95,163 @@ public class MovieListActivity extends AppCompatActivity {
             // activity should be in two-pane mode.
             mTwoPane = true;
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if ((id == R.id.action_sort_rating) && (sortStyle != SortStyle.VOTE_DESC)) {
+            fetchData(SortStyle.VOTE_DESC);
+        }
+        else if ((id == R.id.action_sort_popularity) && (sortStyle != SortStyle.POP_DESC)) {
+            fetchData(SortStyle.POP_DESC);
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void fetchData(SortStyle sortBy) {
+        final String SORT_PARAM = "sort_by";
+        final String API_KEY_PARAM = "api_key";
+        final String PAGE_PARAM = "page";
+        final String sortString;
+
+        if (sortBy == SortStyle.POP_ASC) {
+            sortStyle = SortStyle.POP_ASC;
+            sortString = "popularity.asc";
+        }
+        else if (sortBy == SortStyle.POP_DESC) {
+            sortStyle = SortStyle.POP_DESC;
+            sortString = "popularity.desc";
+        }
+        else if (sortBy == SortStyle.VOTE_ASC) {
+            sortStyle = SortStyle.VOTE_ASC;
+            sortString = "vote_average.asc";
+        }
+        else {
+            sortStyle = SortStyle.VOTE_DESC;
+            sortString = "vote_average.desc";
+        }
+
+        mMovieList.clear();
+        mProgressBar.setVisibility(View.VISIBLE);
+
+        Uri builtUri = Uri.parse(Movie.TMDB_BASE_URL).buildUpon()
+                .appendQueryParameter(SORT_PARAM, sortString)
+                .appendQueryParameter(API_KEY_PARAM, "8dea3a0df3a7f2215def4ff1da625627")
+                .appendQueryParameter(PAGE_PARAM, "1")
+                .build();
+
+        final OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(builtUri.toString())
+                .build();
+
+        client.newCall(request).enqueue(new com.squareup.okhttp.Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                Log.e(TAG, e.getMessage(), e);
+                e.printStackTrace();
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mProgressBar.setVisibility(View.GONE);
+                        showDialog();
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Response response) throws IOException {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+
+                getMoviesInfoFromJson(response.body().string());
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mAdapter.notifyDataSetChanged();
+                        mProgressBar.setVisibility(View.INVISIBLE);
+                    }
+                });
+            }
+        });
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList("movies", mMovieList);
+        super.onSaveInstanceState(outState);
+    }
+
+    private void getMoviesInfoFromJson(String mJSONStr) {
+        final String PAGE = "page";
+        final String RESULTS = "results";
+        final String TOTAL_PAGES = "total_pages";
+        final String TOTAL_RESULTS = "total_results";
+
+        try {
+            JSONObject mJSONData = new JSONObject(mJSONStr);
+            int pages = mJSONData.getInt(PAGE);
+            JSONArray moviesArray = mJSONData.getJSONArray(RESULTS);
+            int totalPages = mJSONData.getInt(TOTAL_PAGES);
+            int totalResults = mJSONData.getInt(TOTAL_RESULTS);
+
+            for (int index = 0; index < moviesArray.length(); index++) {
+                JSONObject jsonObject = moviesArray.getJSONObject(index);
+                String title = jsonObject.getString("original_title");
+                String imagePath = jsonObject.getString("backdrop_path");
+                String overview = jsonObject.getString("overview");
+                String rating = jsonObject.getString("vote_average");
+                String release_date = jsonObject.getString("release_date");
+
+                Movie movie = new Movie(title, imagePath, overview, rating, release_date);
+                mMovieList.add(movie);
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, e.getMessage(), e);
+            e.printStackTrace();
+        }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager manager = (ConnectivityManager)
+                getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = manager.getActiveNetworkInfo();
+
+        return (networkInfo != null && networkInfo.isConnected());
+    }
+
+
+    private void showDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MovieListActivity.this);
+        builder.setMessage("Internet connectivity not available!");
+        builder.setTitle("Information");
+
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+                return;
+            }
+        });
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
     public class SimpleItemRecyclerViewAdapter
@@ -103,28 +267,19 @@ public class MovieListActivity extends AppCompatActivity {
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.movie_list_content, parent, false);
+
             return new ViewHolder(view);
         }
 
         @Override
         public void onBindViewHolder(final ViewHolder holder, final int position) {
-//            holder.mIdView.setText(mValues.get(position).getTitle());
-//            holder.mContentView.setText(mValues.get(position).getRating());
-
-            int width = getResources().getDisplayMetrics().widthPixels / 2;
-            int height = (16 * width) / 9;
-
-            final String TMDB_BASE_URL = "http://image.tmdb.org/t/p/w342";
-            String url = TMDB_BASE_URL + mValues.get(position).getImagePath();
-            System.out.println(url);
-
+            String url = Movie.TMDB_BASE_POSTER_URL + mValues.get(position).getImagePath();
             Picasso.with(getApplicationContext())
                     .load(url)
-                    .resize(width, height)
-                    .centerCrop()
+                    .placeholder(R.color.colorPrimary)
                     .into(holder.mImageView);
 
-            holder.mView.setOnClickListener(new View.OnClickListener() {
+            holder.mImageView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mTwoPane) {
@@ -152,138 +307,11 @@ public class MovieListActivity extends AppCompatActivity {
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
-            public final View mView;
-//            public final TextView mIdView;
-//            public final TextView mContentView;
             public final ImageView mImageView;
 
             public ViewHolder(View view) {
                 super(view);
-                mView = view;
-//                mIdView = (TextView) view.findViewById(R.id.id);
-//                mContentView = (TextView) view.findViewById(R.id.content);
                 mImageView = (ImageView) view.findViewById(R.id.image);
-            }
-
-            @Override
-            public String toString() {
-                return super.toString();
-//                + " '" + mContentView.getText() + "'";
-            }
-        }
-    }
-
-    private class MoviesInfoTask extends AsyncTask<URL, Integer, Void> {
-        private final String LOG_TAG = MoviesInfoTask.class.getSimpleName();
-        private List list;
-        private SimpleItemRecyclerViewAdapter adapter;
-
-        public MoviesInfoTask(List list, SimpleItemRecyclerViewAdapter adapter) {
-            super();
-            this.list = list;
-            this.adapter = adapter;
-        }
-
-        @Override
-        protected Void doInBackground(URL... params) {
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-
-            try {
-                final String TMDB_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
-                final String SORT_PARAM = "sort_by";
-                final String API_KEY_PARAM = "api_key";
-                final String PAGE_PARAM = "units";
-
-                Uri builtUri = Uri.parse(TMDB_BASE_URL).buildUpon()
-                        .appendQueryParameter(SORT_PARAM, "popularity.desc")
-                        .appendQueryParameter(API_KEY_PARAM, "8dea3a0df3a7f2215def4ff1da625627")
-                        .appendQueryParameter(PAGE_PARAM, "1")
-                        .build();
-                URL url = new URL(builtUri.toString());
-
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                // Read the input stream into a String
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-                if (inputStream == null) {
-                    return null;
-                }
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line + "\n");
-                }
-
-                System.out.println(buffer.toString());
-                getMoviesInfoFromJson(buffer.toString());
-            } catch (Exception e) {
-                Log.e(LOG_TAG, e.getMessage(), e);
-                e.printStackTrace();
-            } finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException e) {
-                        Log.e(LOG_TAG, "Error closing stream", e);
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            ((SimpleItemRecyclerViewAdapter) adapter).notifyDataSetChanged();
-        }
-
-        private void getMoviesInfoFromJson(String mJSONStr) throws JSONException {
-            final String PAGE = "page";
-            final String RESULTS = "results";
-            final String TOTAL_PAGES = "total_pages";
-            final String TOTAL_RESULTS = "total_results";
-
-            try {
-                JSONObject mJSONData = new JSONObject(mJSONStr);
-                int pages = mJSONData.getInt(PAGE);
-                JSONArray moviesArray = mJSONData.getJSONArray(RESULTS);
-                int totalPages = mJSONData.getInt(TOTAL_PAGES);
-                int totalResults = mJSONData.getInt(TOTAL_RESULTS);
-
-                for (int index=0; index<moviesArray.length(); index++) {
-                    JSONObject jsonObject = moviesArray.getJSONObject(index);
-                    String title = jsonObject.getString("original_title");
-                    String imagePath = jsonObject.getString("backdrop_path");
-                    String overview = jsonObject.getString("overview");
-                    String rating = jsonObject.getString("vote_average");
-                    String release_date = jsonObject.getString("release_date");
-
-                    Log.i(LOG_TAG, imagePath);
-                    Movie movie = new Movie(title, imagePath, overview, rating, release_date);
-                    list.add(movie);
-                }
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, e.getMessage(), e);
-                e.printStackTrace();
             }
         }
     }
