@@ -59,7 +59,7 @@ public class MovieDetailFragment extends Fragment {
             String url = Movie.TMDB_BASE_POSTER_URL + movie.getImagePath();
             Picasso.with(getContext())
                     .load(url)
-                    .placeholder(R.color.colorPrimary)
+                    .placeholder(R.color.colorPoster)
                     .into(imageView);
         }
 

@@ -45,13 +45,17 @@ import java.util.List;
  * item details side-by-side using two vertical panes.
  */
 public class MovieListActivity extends AppCompatActivity {
+    public static final int POP_ASC = 0;
+    public static final int POP_DESC = 1;
+    public static final int VOTE_ASC = 2;
+    public static final int VOTE_DESC = 3;
+
     private static final String TAG = MovieListActivity.class.getSimpleName();
     private boolean mTwoPane;
     private ArrayList<Movie> mMovieList;
     private SimpleItemRecyclerViewAdapter mAdapter;
     private ProgressBar mProgressBar;
-    private enum SortStyle { POP_ASC, POP_DESC, VOTE_ASC, VOTE_DESC};
-    private SortStyle sortStyle;
+    private int sortStyle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,10 +76,11 @@ public class MovieListActivity extends AppCompatActivity {
             }
 
             mMovieList = new ArrayList<>();
-            fetchData(SortStyle.POP_DESC);
+            fetchData(POP_DESC);
         }
         else {
             mMovieList = savedInstanceState.getParcelableArrayList("movies");
+            sortStyle = savedInstanceState.getInt("sortStyle");
             mProgressBar.setVisibility(View.GONE);
         }
 
@@ -113,36 +118,36 @@ public class MovieListActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if ((id == R.id.action_sort_rating) && (sortStyle != SortStyle.VOTE_DESC)) {
-            fetchData(SortStyle.VOTE_DESC);
+        if ((id == R.id.action_sort_rating) && (sortStyle != VOTE_DESC)) {
+            fetchData(VOTE_DESC);
         }
-        else if ((id == R.id.action_sort_popularity) && (sortStyle != SortStyle.POP_DESC)) {
-            fetchData(SortStyle.POP_DESC);
+        else if ((id == R.id.action_sort_popularity) && (sortStyle != POP_DESC)) {
+            fetchData(POP_DESC);
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    private void fetchData(SortStyle sortBy) {
+    private void fetchData(int sortBy) {
         final String SORT_PARAM = "sort_by";
         final String API_KEY_PARAM = "api_key";
         final String PAGE_PARAM = "page";
         final String sortString;
 
-        if (sortBy == SortStyle.POP_ASC) {
-            sortStyle = SortStyle.POP_ASC;
+        if (sortBy == POP_ASC) {
+            sortStyle = POP_ASC;
             sortString = "popularity.asc";
         }
-        else if (sortBy == SortStyle.POP_DESC) {
-            sortStyle = SortStyle.POP_DESC;
+        else if (sortBy == POP_DESC) {
+            sortStyle = POP_DESC;
             sortString = "popularity.desc";
         }
-        else if (sortBy == SortStyle.VOTE_ASC) {
-            sortStyle = SortStyle.VOTE_ASC;
+        else if (sortBy == VOTE_ASC) {
+            sortStyle = VOTE_ASC;
             sortString = "vote_average.asc";
         }
         else {
-            sortStyle = SortStyle.VOTE_DESC;
+            sortStyle = VOTE_DESC;
             sortString = "vote_average.desc";
         }
 
@@ -195,6 +200,7 @@ public class MovieListActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putParcelableArrayList("movies", mMovieList);
+        outState.putInt("sortStyle", sortStyle);
         super.onSaveInstanceState(outState);
     }
 
@@ -276,7 +282,7 @@ public class MovieListActivity extends AppCompatActivity {
             String url = Movie.TMDB_BASE_POSTER_URL + mValues.get(position).getImagePath();
             Picasso.with(getApplicationContext())
                     .load(url)
-                    .placeholder(R.color.colorPrimary)
+                    .placeholder(R.color.colorPoster)
                     .into(holder.mImageView);
 
             holder.mImageView.setOnClickListener(new View.OnClickListener() {
