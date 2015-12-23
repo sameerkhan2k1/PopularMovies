@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Rect;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -56,6 +57,7 @@ public class MovieListActivity extends AppCompatActivity {
     private SimpleItemRecyclerViewAdapter mAdapter;
     private ProgressBar mProgressBar;
     private int sortStyle;
+    private boolean isfetchThreadAlive;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +83,11 @@ public class MovieListActivity extends AppCompatActivity {
         else {
             mMovieList = savedInstanceState.getParcelableArrayList("movies");
             sortStyle = savedInstanceState.getInt("sortStyle");
+            isfetchThreadAlive = savedInstanceState.getBoolean("fetchThread");
+
+            if (isfetchThreadAlive) {
+                fetchData(sortStyle);
+            }
             mProgressBar.setVisibility(View.GONE);
         }
 
@@ -92,6 +99,9 @@ public class MovieListActivity extends AppCompatActivity {
         RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
         ((RecyclerView) recyclerView).setLayoutManager(layoutManager);
         ((RecyclerView) recyclerView).setHasFixedSize(true);
+
+        ItemOffsetDecoration itemDecoration = new ItemOffsetDecoration(this, R.dimen.item_offset);
+        ((RecyclerView) recyclerView).addItemDecoration(itemDecoration);
 
         if (findViewById(R.id.movie_detail_container) != null) {
             // The detail container view will be present only in the
@@ -153,6 +163,7 @@ public class MovieListActivity extends AppCompatActivity {
 
         mMovieList.clear();
         mProgressBar.setVisibility(View.VISIBLE);
+        isfetchThreadAlive = true;
 
         Uri builtUri = Uri.parse(Movie.TMDB_BASE_URL).buildUpon()
                 .appendQueryParameter(SORT_PARAM, sortString)
@@ -176,6 +187,7 @@ public class MovieListActivity extends AppCompatActivity {
                     public void run() {
                         mProgressBar.setVisibility(View.GONE);
                         showDialog();
+                        isfetchThreadAlive = false;
                     }
                 });
             }
@@ -191,6 +203,7 @@ public class MovieListActivity extends AppCompatActivity {
                     public void run() {
                         mAdapter.notifyDataSetChanged();
                         mProgressBar.setVisibility(View.INVISIBLE);
+                        isfetchThreadAlive = false;
                     }
                 });
             }
@@ -201,6 +214,7 @@ public class MovieListActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         outState.putParcelableArrayList("movies", mMovieList);
         outState.putInt("sortStyle", sortStyle);
+        outState.putBoolean("fetchThread", isfetchThreadAlive);
         super.onSaveInstanceState(outState);
     }
 
@@ -319,6 +333,26 @@ public class MovieListActivity extends AppCompatActivity {
                 super(view);
                 mImageView = (ImageView) view.findViewById(R.id.image);
             }
+        }
+    }
+
+    public class ItemOffsetDecoration extends RecyclerView.ItemDecoration {
+
+        private int mItemOffset;
+
+        public ItemOffsetDecoration(int itemOffset) {
+            mItemOffset = itemOffset;
+        }
+
+        public ItemOffsetDecoration(Context context, int itemOffsetId) {
+            this(context.getResources().getDimensionPixelSize(itemOffsetId));
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent,
+                                   RecyclerView.State state) {
+            super.getItemOffsets(outRect, view, parent, state);
+            outRect.set(mItemOffset, mItemOffset, mItemOffset, mItemOffset);
         }
     }
 }

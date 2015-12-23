@@ -6,6 +6,8 @@
     android:name="com.sameer.android.popularmovies.MovieListFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:padding="@dimen/item_offset"
     app:layoutManager="android.support.v7.widget.GridLayoutManager"
     tools:context="com.sameer.android.popularmovies.MovieListActivity"
     tools:listitem="@layout/movie_list_content">
