@@ -22,7 +22,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
-import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
@@ -34,7 +33,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,10 +44,11 @@ import java.util.List;
  * item details side-by-side using two vertical panes.
  */
 public class MovieListActivity extends AppCompatActivity {
-    public static final int POP_ASC = 0;
-    public static final int POP_DESC = 1;
-    public static final int VOTE_ASC = 2;
-    public static final int VOTE_DESC = 3;
+    private static final int POP_ASC = 0;
+    private static final int POP_DESC = 1;
+    private static final int VOTE_ASC = 2;
+    private static final int VOTE_DESC = 3;
+    private static final int NUM_COLUMN = 2;
 
     private static final String TAG = MovieListActivity.class.getSimpleName();
     private boolean mTwoPane;
@@ -79,8 +78,7 @@ public class MovieListActivity extends AppCompatActivity {
 
             mMovieList = new ArrayList<>();
             fetchData(POP_DESC);
-        }
-        else {
+        } else {
             mMovieList = savedInstanceState.getParcelableArrayList("movies");
             sortStyle = savedInstanceState.getInt("sortStyle");
             isfetchThreadAlive = savedInstanceState.getBoolean("fetchThread");
@@ -96,7 +94,7 @@ public class MovieListActivity extends AppCompatActivity {
         View recyclerView = findViewById(R.id.movie_list);
         ((RecyclerView) recyclerView).setAdapter(mAdapter);
 
-        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
+        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, NUM_COLUMN);
         ((RecyclerView) recyclerView).setLayoutManager(layoutManager);
         ((RecyclerView) recyclerView).setHasFixedSize(true);
 
@@ -130,8 +128,7 @@ public class MovieListActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if ((id == R.id.action_sort_rating) && (sortStyle != VOTE_DESC)) {
             fetchData(VOTE_DESC);
-        }
-        else if ((id == R.id.action_sort_popularity) && (sortStyle != POP_DESC)) {
+        } else if ((id == R.id.action_sort_popularity) && (sortStyle != POP_DESC)) {
             fetchData(POP_DESC);
         }
 
@@ -147,16 +144,13 @@ public class MovieListActivity extends AppCompatActivity {
         if (sortBy == POP_ASC) {
             sortStyle = POP_ASC;
             sortString = "popularity.asc";
-        }
-        else if (sortBy == POP_DESC) {
+        } else if (sortBy == POP_DESC) {
             sortStyle = POP_DESC;
             sortString = "popularity.desc";
-        }
-        else if (sortBy == VOTE_ASC) {
+        } else if (sortBy == VOTE_ASC) {
             sortStyle = VOTE_ASC;
             sortString = "vote_average.asc";
-        }
-        else {
+        } else {
             sortStyle = VOTE_DESC;
             sortString = "vote_average.desc";
         }
@@ -276,10 +270,13 @@ public class MovieListActivity extends AppCompatActivity {
 
     public class SimpleItemRecyclerViewAdapter
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
-
+        private final int width;
+        private final int height;
         private final List<Movie> mValues;
 
         public SimpleItemRecyclerViewAdapter(List<Movie> items) {
+            width = getApplicationContext().getResources().getDisplayMetrics().widthPixels / NUM_COLUMN;
+            height = (width * 192) / 342;
             mValues = items;
         }
 
@@ -294,8 +291,10 @@ public class MovieListActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(final ViewHolder holder, final int position) {
             String url = Movie.TMDB_BASE_POSTER_URL + mValues.get(position).getImagePath();
+
             Picasso.with(getApplicationContext())
                     .load(url)
+                    .resize(width, height)
                     .placeholder(R.color.colorPoster)
                     .into(holder.mImageView);
 

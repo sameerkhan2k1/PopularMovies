@@ -11,7 +11,15 @@ import java.util.Comparator;
 public class Movie implements Parcelable, Comparator, Comparable {
     public static final String TMDB_BASE_POSTER_URL = "http://image.tmdb.org/t/p/w342";
     public static final String TMDB_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
 
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
     private String title;
     private String imagePath;
     private String overview;
@@ -24,6 +32,14 @@ public class Movie implements Parcelable, Comparator, Comparable {
         this.rating = rating;
         this.release_date = release_date;
         this.title = title;
+    }
+
+    private Movie(Parcel in) {
+        title = in.readString();
+        imagePath = in.readString();
+        overview = in.readString();
+        rating = in.readString();
+        release_date = in.readString();
     }
 
     public String getImagePath() {
@@ -58,31 +74,13 @@ public class Movie implements Parcelable, Comparator, Comparable {
         out.writeString(release_date);
     }
 
-    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
-        public Movie createFromParcel(Parcel in) {
-            return new Movie(in);
-        }
-
-        public Movie[] newArray(int size) {
-            return new Movie[size];
-        }
-    };
-
-    private Movie(Parcel in) {
-        title = in.readString();
-        imagePath = in.readString();
-        overview = in.readString();
-        rating = in.readString();
-        release_date = in.readString();
-    }
-
     @Override
     public int compareTo(Object another) {
-        return Double.compare(Double.parseDouble(((Movie)another).getRating()), Double.parseDouble(this.getRating()));
+        return Double.compare(Double.parseDouble(((Movie) another).getRating()), Double.parseDouble(this.getRating()));
     }
 
     @Override
     public int compare(Object lhs, Object rhs) {
-        return Double.compare(Double.parseDouble(((Movie)lhs).getRating()), Double.parseDouble(((Movie)rhs).getRating()));
+        return Double.compare(Double.parseDouble(((Movie) lhs).getRating()), Double.parseDouble(((Movie) rhs).getRating()));
     }
 }

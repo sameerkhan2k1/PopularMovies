@@ -28,6 +28,7 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <include layout="@layout/movie_list" />
+
         <include layout="@layout/movie_progress" />
     </FrameLayout>
 

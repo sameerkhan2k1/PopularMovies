@@ -1,14 +1,15 @@
 package com.sameer.android.popularmovies;
 
 import android.app.Activity;
-import android.support.design.widget.CollapsingToolbarLayout;
 import android.os.Bundle;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.squareup.picasso.Picasso;
 
 /**
@@ -25,6 +26,7 @@ public class MovieDetailFragment extends Fragment {
     public static final String ARG_MOVIE = "movie";
 
     private Movie movie;
+
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -55,7 +57,7 @@ public class MovieDetailFragment extends Fragment {
         if (appBarLayout != null) {
             appBarLayout.setTitle(" ");
 
-            ImageView imageView = (ImageView)activity.findViewById(R.id.movie_post);
+            ImageView imageView = (ImageView) activity.findViewById(R.id.movie_post);
             String url = Movie.TMDB_BASE_POSTER_URL + movie.getImagePath();
             Picasso.with(getContext())
                     .load(url)
